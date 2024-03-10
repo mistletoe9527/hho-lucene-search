@@ -17,8 +17,8 @@ public class Test {
     // change your path
 
     public static void main(String[] args) throws Exception{
-        DataRepository dataRepository = new DataRepository();
         LuceneSearchManager.path = "C:\\Users\\admin\\Desktop\\index";
+        DataRepository dataRepository = new DataRepository();
         int threadCount = 10;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch countDownLatch = new CountDownLatch(threadCount);
