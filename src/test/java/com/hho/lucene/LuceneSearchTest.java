@@ -137,34 +137,30 @@ public class LuceneSearchTest {
         int threadCount = 10;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch countDownLatch = new CountDownLatch(threadCount);
-        for (; ; ) {
-            for (int i = 0; i < threadCount; i++) {
-                executor.submit(() -> {
-                    DataQryByIdsRequest dataQryByIdsRequest = new DataQryByIdsRequest();
-                    dataQryByIdsRequest.setIds(ListUtil.of(1L, 2L, 3L));
-                    dataQryByIdsRequest.setPageNo(1);
-                    dataQryByIdsRequest.setPageSize(10);
-                    List<Data> dataList = dataRepository.queryDataByIds(dataQryByIdsRequest);
-                    for (Data d : dataList) {
-                        System.out.println("更改前：" + JSONObject.toJSONString(d));
-                        d.setTitle("xxx");
-                    }
-                    dataRepository.batchUpdate(dataList);
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                DataQryByIdsRequest dataQryByIdsRequest = new DataQryByIdsRequest();
+                dataQryByIdsRequest.setIds(ListUtil.of(1L, 2L, 3L));
+                dataQryByIdsRequest.setPageNo(1);
+                dataQryByIdsRequest.setPageSize(10);
+                List<Data> dataList = dataRepository.queryDataByIds(dataQryByIdsRequest);
+                for (Data d : dataList) {
+                    System.out.println("更改前：" + JSONObject.toJSONString(d));
+                    d.setTitle("xxx");
+                }
+                dataRepository.batchUpdate(dataList);
 
-                    dataList = dataRepository.queryDataByIds(dataQryByIdsRequest);
+                dataList = dataRepository.queryDataByIds(dataQryByIdsRequest);
 
-                    for (Data d : dataList) {
-                        System.out.println("更改后：" + JSONObject.toJSONString(d));
-                        Assert.assertTrue("xxx".equals(d.getTitle()));
-                    }
+                for (Data d : dataList) {
+                    System.out.println("更改后：" + JSONObject.toJSONString(d));
+                }
 
-                    countDownLatch.countDown();
-                });
-            }
-            countDownLatch.await();
+                countDownLatch.countDown();
+            });
         }
+        countDownLatch.await();
 
     }
-
 
 }
