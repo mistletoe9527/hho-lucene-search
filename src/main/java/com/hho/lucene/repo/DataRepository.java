@@ -36,6 +36,8 @@ public class DataRepository implements IDataRepository {
         } catch (IOException e) {
             log.error("DataRepository 更新错误 msg{}", e.getMessage(), e);
         } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
             log.error("DataRepository 未知异常 msg{}", e.getMessage(), e);
         }
     }
@@ -59,6 +61,8 @@ public class DataRepository implements IDataRepository {
         } catch (ParseException e) {
             log.error("DataRepository id查询错误 msg{}", e.getMessage(), e);
         } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
             log.error("DataRepository id查询未知异常 msg{}", e.getMessage(), e);
         }
         return Collections.emptyList();
@@ -82,6 +86,8 @@ public class DataRepository implements IDataRepository {
             log.error("DataRepository title查询错误 msg{}", e.getMessage(), e);
         } catch (IOException e) {
             log.error("DataRepository title查询错误 msg{}", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("DataRepository 未知异常 msg{}", e.getMessage(), e);
         }
         return Collections.emptyList();
     }

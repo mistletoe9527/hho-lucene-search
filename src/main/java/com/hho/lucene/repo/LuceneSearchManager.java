@@ -45,8 +45,6 @@ public class LuceneSearchManager {
 
     private final int MAX_SEARCH_DOC_COUNT = 5000;
 
-    private final int maxErrorCount = 5;
-
     private final Object writeLock = new Object();
 
     private final Object readLock = new Object();
@@ -55,7 +53,7 @@ public class LuceneSearchManager {
 
     private IndexWriter indexWriter = null;
 
-    private volatile boolean lock = false;
+    private final Object lock = new Object();
 
     private volatile boolean updated = false;
 
@@ -189,32 +187,18 @@ public class LuceneSearchManager {
 
 
     private void sync4update() throws Exception {
-        for (; ; ) {
-            if (!lock) {
-                lock = true;
-                indexSearcher.getIndexReader().close();
-                indexSearcher = new IndexSearcher(createIndexReader());
-                lock = false;
-                break;
-            }
+        synchronized (lock) {
+            indexSearcher.getIndexReader().close();
+            indexSearcher = new IndexSearcher(createIndexReader());
         }
     }
 
     private Object sync(Callable call) throws Exception {
-        for (; ; ) {
-            if (!lock) {
-                for (int i = 0; i < maxErrorCount; i++) {
-                    try {
-                        return call.call();
-                    } catch (AlreadyClosedException e) {
-                        //ignore
-                        TimeUnit.MILLISECONDS.sleep(10);
-                    }
-                }
-                throw new RuntimeException("系统异常，稍后重试");
-            }
+        synchronized (lock) {
+            return call.call();
         }
     }
+
 
     /**
      * 查询松鼠
