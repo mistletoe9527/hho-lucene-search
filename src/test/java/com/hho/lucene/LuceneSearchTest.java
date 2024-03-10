@@ -57,18 +57,18 @@ public class LuceneSearchTest {
     @Test
     public void testQueryDataByTitle() {
         DataQryByTitleRequest dataQryByIdsRequest = new DataQryByTitleRequest();
-        dataQryByIdsRequest.setTitle("1ask");
+        dataQryByIdsRequest.setTitle("ask");
         dataQryByIdsRequest.setPageNo(1);
-        dataQryByIdsRequest.setPageSize(10);
+        dataQryByIdsRequest.setPageSize(5);
         //是否前缀撇配
         dataQryByIdsRequest.setPrefixSearch(true);
         //自定义查询
-//        dataQryByIdsRequest.setQueryStr("1askghjhskdjl~");
+//        dataQryByIdsRequest.setQueryStr("askghjhskdjl1~");
         List<Data> data = dataRepository.queryDataByTitle(dataQryByIdsRequest);
         for (Data d : data) {
             System.out.println(JSONObject.toJSONString(d));
         }
-        Assert.assertTrue(CollectionUtils.isEmpty(data) || data.get(0).getTitle().contains("1"));
+        Assert.assertTrue(CollectionUtils.isEmpty(data) || data.get(0).getTitle().contains("ask"));
     }
 
     /**
@@ -82,7 +82,7 @@ public class LuceneSearchTest {
         DataQryByStatusRequest dataQryByStatusRequest = new DataQryByStatusRequest();
         dataQryByStatusRequest.setStatusList(statuses);
         dataQryByStatusRequest.setPageNo(1);
-        dataQryByStatusRequest.setPageSize(10);
+        dataQryByStatusRequest.setPageSize(5);
         List<Data> data = dataRepository.queryDataByStatus(dataQryByStatusRequest);
         for (Data d : data) {
             System.out.println(JSONObject.toJSONString(d));
@@ -158,9 +158,7 @@ public class LuceneSearchTest {
                     Assert.assertTrue("xxx".equals(d.getTitle()));
                 }
 
-
                 countDownLatch.countDown();
-
             });
         }
         countDownLatch.await();

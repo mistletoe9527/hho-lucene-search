@@ -70,7 +70,7 @@ public class DataRepository implements IDataRepository {
         try {
 
             String queryStr = StringUtils.isBlank(request.getQueryStr())
-                    ? (request.getPrefixSearch() ? request.getTitle() + "*" : request.getTitle()) : request.getQueryStr();
+                    ? ((request.getPrefixSearch() != null && request.getPrefixSearch()) ? request.getTitle() + "*" : request.getTitle()) : request.getQueryStr();
 
             // 解析查询语句
             Query query = parser.parse(queryStr);

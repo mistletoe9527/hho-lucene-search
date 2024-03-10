@@ -34,7 +34,12 @@ public class LuceneSearchManager {
     private final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_47);
     private final int DEFAULT_INIT_SIZE = 50000;
 
-    private final int DEFAULT_RANDOM_TIME = 3600 * 24 * 365 * 1000;
+    private final int DEFAULT_RANDOM_TIME = 36000 * 24 * 365;
+
+    private final int MAX_DOC_PAGE_SIZE = 500;
+
+    private final int MAX_SEARCH_DOC_COUNT = 5000;
+
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -57,7 +62,7 @@ public class LuceneSearchManager {
                         builder()
                         .id((long) i)
                         .time(System.currentTimeMillis() - new Random().nextInt(DEFAULT_RANDOM_TIME))
-                        .title(i + "askghjhskdjl")
+                        .title("askghjhskdjl" + i)
                         .status(statuses.get(new Random().nextInt(statuses.size()))).build();
                 documents.add(DataConvert.toDocument(build));
                 if (documents.size() >= batchSize) {
@@ -115,9 +120,8 @@ public class LuceneSearchManager {
      * Lucene分页查询
      */
     public List<Document> pageQuery4sort(Query query, Page page, Sort sort) throws IOException {
-
+        maxDocControl(page);
         lock.readLock().lock();
-
         try {
             IndexSearcher searcher = createIndexSearcher();
             TopDocs topDocs = null;
@@ -201,5 +205,22 @@ public class LuceneSearchManager {
         }
         ScoreDoc[] docs = topDocs.scoreDocs;
         return docs.length;
+    }
+
+    private void maxDocControl(Page page) {
+
+        if (page.getPageSize() == null) {
+            page.setPageSize(10);
+        }
+        if (page.getPageNo() == null) {
+            page.setPageNo(1);
+        }
+        if (page.getPageSize() > MAX_DOC_PAGE_SIZE) {
+            page.setPageSize(MAX_DOC_PAGE_SIZE);
+        }
+        if (page.getPageNo() * page.getPageSize() > MAX_SEARCH_DOC_COUNT) {
+            page.setPageNo(MAX_SEARCH_DOC_COUNT / page.getPageSize());
+        }
+
     }
 }
