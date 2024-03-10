@@ -40,12 +40,13 @@ public class LuceneSearchManager {
 
     private final int MAX_SEARCH_DOC_COUNT = 5000;
 
+    private final Object writeLock = new Object();
 
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
-
-    private final Object readlock = new Object();
+    private final Object readLock = new Object();
 
     private IndexSearcher indexSearcher = null;
+
+    private IndexWriter indexWriter = null;
 
     public LuceneSearchManager() {
         try {
@@ -75,7 +76,6 @@ public class LuceneSearchManager {
 
             indexWrite.addDocuments(documents);
             indexWrite.commit();
-            indexWrite.close();
             log.info("LuceneSearchManager 数据初始化完成 耗费时间:{}s", (System.currentTimeMillis() - start) / 1000);
         } catch (Exception e) {
             log.error("LuceneSearchManager 数据初始化失败", e);
@@ -88,8 +88,16 @@ public class LuceneSearchManager {
      * 创建索引阅读器
      */
     private IndexWriter createIndexWrite() throws IOException {
-        IndexWriterConfig indexWriterConfig = new IndexWriterConfig(Version.LUCENE_47, analyzer);
-        return new IndexWriter(new MMapDirectory(new File(path)), indexWriterConfig);
+        if (indexWriter == null) {
+            synchronized (writeLock) {
+                if (indexWriter == null) {
+                    IndexWriterConfig indexWriterConfig = new IndexWriterConfig(Version.LUCENE_47, analyzer);
+                    indexWriter = new IndexWriter(new MMapDirectory(new File(path)), indexWriterConfig);
+                }
+                return indexWriter;
+            }
+        }
+        return indexWriter;
     }
 
 
@@ -105,7 +113,7 @@ public class LuceneSearchManager {
      */
     private IndexSearcher createIndexSearcher() throws IOException {
         if (indexSearcher == null) {
-            synchronized (readlock) {
+            synchronized (readLock) {
                 if (indexSearcher == null) {
                     indexSearcher = new IndexSearcher(createIndexReader());
                 }
@@ -120,41 +128,37 @@ public class LuceneSearchManager {
      * Lucene分页查询
      */
     public List<Document> pageQuery4sort(Query query, Page page, Sort sort) throws IOException {
+
         maxDocControl(page);
-        lock.readLock().lock();
-        try {
-            IndexSearcher searcher = createIndexSearcher();
-            TopDocs topDocs = null;
+        IndexSearcher searcher = createIndexSearcher();
+        TopDocs topDocs = null;
 
-            if (sort == null) {
-                topDocs = searcher.search(query, page.getPageSize() * page.getPageNo());
-            } else {
-                topDocs = searcher.search(query, page.getPageSize() * page.getPageNo(), sort);
-            }
-
-            ScoreDoc[] scoreDocs = topDocs.scoreDocs;
-
-            List<Document> docList = new ArrayList<>((int) Math.ceil(page.getPageSize() * 1.5));
-
-            // 计算记录起始数
-            int start = (page.getPageNo() - 1) * page.getPageSize();
-
-            int end = start + page.getPageSize();
-
-            for (int i = start; i < end; i++) {
-                if (i >= scoreDocs.length) {
-                    break;
-                }
-                // 获取文档Id和评分
-                int docId = scoreDocs[i].doc;
-                Document doc = searcher.doc(docId);
-                docList.add(doc);
-            }
-
-            return docList;
-        } finally {
-            lock.readLock().unlock();
+        if (sort == null) {
+            topDocs = searcher.search(query, page.getPageSize() * page.getPageNo());
+        } else {
+            topDocs = searcher.search(query, page.getPageSize() * page.getPageNo(), sort);
         }
+
+        ScoreDoc[] scoreDocs = topDocs.scoreDocs;
+
+        List<Document> docList = new ArrayList<>((int) Math.ceil(page.getPageSize() * 1.5));
+
+        // 计算记录起始数
+        int start = (page.getPageNo() - 1) * page.getPageSize();
+
+        int end = start + page.getPageSize();
+
+        for (int i = start; i < end; i++) {
+            if (i >= scoreDocs.length) {
+                break;
+            }
+            // 获取文档Id和评分
+            int docId = scoreDocs[i].doc;
+            Document doc = searcher.doc(docId);
+            docList.add(doc);
+        }
+
+        return docList;
 
     }
 
@@ -176,21 +180,16 @@ public class LuceneSearchManager {
         }
         long start = System.currentTimeMillis();
         log.info("LuceneSearchManager 数据更新开始 文档数量：{}", documents.size());
-        lock.writeLock().lock();
-        try {
-            IndexWriter indexWrite = createIndexWrite();
-            for (Document document : documents) {
-                indexWrite.updateDocument(new Term("id", document.get("id")), document);
-            }
-            indexWrite.commit();
-            indexWrite.close();
 
-            //TODO 频繁更新的话 放队列 合并重建任务
-            indexSearcher.getIndexReader().close();
-            indexSearcher = new IndexSearcher(createIndexReader());
-        } finally {
-            lock.writeLock().unlock();
+        IndexWriter indexWrite = createIndexWrite();
+        for (Document document : documents) {
+            indexWrite.updateDocument(new Term("id", document.get("id")), document);
         }
+//        indexWrite.commit();
+
+        //TODO 频繁更新的话 放队列 合并重建任务
+//        indexSearcher.getIndexReader().close();
+//        indexSearcher = new IndexSearcher(createIndexReader());
 
         log.info("LuceneSearchManager 数据更新完成 文档数量：{} 花费time:{}ms", documents.size(), System.currentTimeMillis() - start);
     }
