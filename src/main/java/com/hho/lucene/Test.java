@@ -16,9 +16,6 @@ public class Test {
 
     // change your path
 
-
-
-
     public static void main(String[] args) throws Exception{
         DataRepository dataRepository = new DataRepository();
         LuceneSearchManager.path = "C:\\Users\\admin\\Desktop\\index";
