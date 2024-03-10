@@ -280,8 +280,8 @@ public class LuceneSearchManager {
                 long l = System.currentTimeMillis();
                 while (updated) {
                     updated = false;
-                    indexWriter.commit();
                     sync4update();
+                    indexWriter.commit();
                 }
                 log.info("定时刷新缓冲区成功" + (System.currentTimeMillis() - l));
             } catch (Exception e) {
