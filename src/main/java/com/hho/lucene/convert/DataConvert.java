@@ -3,10 +3,8 @@ package com.hho.lucene.convert;
 import com.hho.lucene.constant.Status;
 import com.hho.lucene.entity.Data;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.LongField;
-import org.apache.lucene.document.StringField;
+import org.apache.lucene.document.*;
+import org.apache.lucene.util.BytesRef;
 
 import java.util.Collections;
 import java.util.List;
@@ -62,12 +60,15 @@ public class DataConvert {
         StringField id = new StringField("id", String.valueOf(data.getId()), Field.Store.YES);
         StringField status = new StringField("status", data.getStatus().name().toLowerCase(), Field.Store.YES);
         StringField title = new StringField("title", data.getTitle(), Field.Store.YES);
-        LongField time = new LongField("time", data.getTime(), Field.Store.YES);
+        StringField timeStr = new StringField("time", String.valueOf(data.getTime()), Field.Store.YES);
+        LongPoint time = new LongPoint("time", data.getTime());
         Document document = new Document();
         document.add(id);
+        document.add(new SortedDocValuesField("id", new BytesRef(String.valueOf(data.getId()))));
         document.add(status);
         document.add(title);
         document.add(time);
+        document.add(timeStr);
         return document;
     }
 

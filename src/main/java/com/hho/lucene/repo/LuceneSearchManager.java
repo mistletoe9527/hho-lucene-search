@@ -21,6 +21,7 @@ import org.apache.lucene.util.Version;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -36,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class LuceneSearchManager {
 
     public static String path;
-    private final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_47);
+    private final Analyzer analyzer = new StandardAnalyzer();
     private final int DEFAULT_INIT_SIZE = 50000;
 
     private final int DEFAULT_RANDOM_TIME = 36000 * 24 * 365;
@@ -77,8 +78,8 @@ public class LuceneSearchManager {
         if (indexWriter == null) {
             synchronized (writeLock) {
                 if (indexWriter == null) {
-                    IndexWriterConfig indexWriterConfig = new IndexWriterConfig(Version.LUCENE_47, analyzer);
-                    indexWriter = new IndexWriter(new MMapDirectory(new File(path)), indexWriterConfig);
+                    IndexWriterConfig indexWriterConfig = new IndexWriterConfig(analyzer);
+                    indexWriter = new IndexWriter(new MMapDirectory(Paths.get(path)), indexWriterConfig);
                 }
                 return indexWriter;
             }
@@ -91,7 +92,7 @@ public class LuceneSearchManager {
      * 创建索引阅读器
      */
     private IndexReader createIndexReader() throws IOException {
-        return DirectoryReader.open(new MMapDirectory(new File(path)));
+        return DirectoryReader.open(new MMapDirectory(Paths.get(path)));
     }
 
     /**
@@ -115,11 +116,9 @@ public class LuceneSearchManager {
      */
     public List<Document> pageQuery4sort(Query query, Page page, Sort sort) throws Exception {
 
-
         maxDocControl(page);
 
         TopDocs topDocs = null;
-
 
         if (sort == null) {
             topDocs = (TopDocs) sync(() -> createIndexSearcher().search(query, page.getPageSize() * page.getPageNo()));
@@ -143,9 +142,9 @@ public class LuceneSearchManager {
             // 获取文档Id和评分
             int docId = scoreDocs[i].doc;
 
-            if (docId >= DEFAULT_INIT_SIZE) {
-                continue;
-            }
+//            if (docId >= DEFAULT_INIT_SIZE) {
+//                continue;
+//            }
             Document doc = (Document) sync(() -> createIndexSearcher().doc(docId));
             docList.add(doc);
         }
@@ -264,8 +263,8 @@ public class LuceneSearchManager {
                 long l = System.currentTimeMillis();
                 while (updated) {
                     updated = false;
-                    sync4update();
                     indexWriter.commit();
+                    sync4update();
                 }
                 log.info("定时刷新缓冲区成功" + (System.currentTimeMillis() - l));
             } catch (Exception e) {

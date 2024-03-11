@@ -97,7 +97,7 @@ public class LuceneSearchTest {
     public void testQueryDataByTime() {
 
         DataRangeQryByTimeRequest dataRangeQryByTimeRequest = new DataRangeQryByTimeRequest();
-        dataRangeQryByTimeRequest.setStartTime(System.currentTimeMillis() - 3600 * 24 * 1000);
+        dataRangeQryByTimeRequest.setStartTime(System.currentTimeMillis() - 36000 * 24 * 1000);
         dataRangeQryByTimeRequest.setEndTime(System.currentTimeMillis());
         dataRangeQryByTimeRequest.setPageNo(1);
         dataRangeQryByTimeRequest.setPageSize(10);
@@ -137,31 +137,29 @@ public class LuceneSearchTest {
         int threadCount = 10;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch countDownLatch = new CountDownLatch(threadCount);
-        for (; ; ) {
-            for (int i = 0; i < threadCount; i++) {
-                executor.submit(() -> {
-                    DataQryByIdsRequest dataQryByIdsRequest = new DataQryByIdsRequest();
-                    dataQryByIdsRequest.setIds(ListUtil.of(1L, 2L, 3L));
-                    dataQryByIdsRequest.setPageNo(1);
-                    dataQryByIdsRequest.setPageSize(10);
-                    List<Data> dataList = dataRepository.queryDataByIds(dataQryByIdsRequest);
-                    for (Data d : dataList) {
-                        System.out.println("更改前：" + JSONObject.toJSONString(d));
-                        d.setTitle("xxx");
-                    }
-                    dataRepository.batchUpdate(dataList);
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                DataQryByIdsRequest dataQryByIdsRequest = new DataQryByIdsRequest();
+                dataQryByIdsRequest.setIds(ListUtil.of(1L, 2L, 3L));
+                dataQryByIdsRequest.setPageNo(1);
+                dataQryByIdsRequest.setPageSize(10);
+                List<Data> dataList = dataRepository.queryDataByIds(dataQryByIdsRequest);
+                for (Data d : dataList) {
+                    System.out.println("更改前：" + JSONObject.toJSONString(d));
+                    d.setTitle("xxx");
+                }
+                dataRepository.batchUpdate(dataList);
 
-                    dataList = dataRepository.queryDataByIds(dataQryByIdsRequest);
+                dataList = dataRepository.queryDataByIds(dataQryByIdsRequest);
 
-                    for (Data d : dataList) {
-                        System.out.println("更改后：" + JSONObject.toJSONString(d));
-                    }
+                for (Data d : dataList) {
+                    System.out.println("更改后：" + JSONObject.toJSONString(d));
+                }
 
-                    countDownLatch.countDown();
-                });
-            }
-            countDownLatch.await();
+                countDownLatch.countDown();
+            });
         }
+        countDownLatch.await();
 
     }
 

@@ -12,7 +12,6 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
@@ -27,7 +26,7 @@ import java.util.stream.Collectors;
 public class DataRepository implements IDataRepository {
     private LuceneSearchManager luceneSearchManager = new LuceneSearchManager();
 
-    private Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_47);
+    private Analyzer analyzer = new StandardAnalyzer();
 
     @Override
     public void batchUpdate(List<Data> entities) {
@@ -37,7 +36,6 @@ public class DataRepository implements IDataRepository {
             log.error("DataRepository 更新错误 msg{}", e.getMessage(), e);
         } catch (Exception e) {
             e.printStackTrace();
-            System.exit(1);
             log.error("DataRepository 未知异常 msg{}", e.getMessage(), e);
         }
     }
@@ -53,16 +51,17 @@ public class DataRepository implements IDataRepository {
             Page page = new Page();
             page.setPageSize(request.getPageSize());
             page.setPageNo(request.getPageNo());
-            return DataConvert.toDataList(luceneSearchManager.pageQuery4sort(QueryBuild.
-                    buildMutilQuery(ids, "id"), page, request.getDesc() == null
-                    ? null : new Sort(new SortField("id", SortField.Type.LONG, request.getDesc()))));
+
+            QueryParser parser = new QueryParser("id", analyzer);
+            Query query = parser.parse(QueryBuild.buildMutilQuery(ids));
+            return DataConvert.toDataList(luceneSearchManager.pageQuery4sort(query, page, request.getDesc() == null
+                    ? null : new Sort(new SortField("id", SortField.Type.STRING, request.getDesc()))));
         } catch (IOException e) {
             log.error("DataRepository id查询错误 msg{}", e.getMessage(), e);
         } catch (ParseException e) {
             log.error("DataRepository id查询错误 msg{}", e.getMessage(), e);
         } catch (Exception e) {
             e.printStackTrace();
-            System.exit(1);
             log.error("DataRepository id查询未知异常 msg{}", e.getMessage(), e);
         }
         return Collections.emptyList();
@@ -70,7 +69,7 @@ public class DataRepository implements IDataRepository {
 
     @Override
     public List<Data> queryDataByTitle(DataQryByTitleRequest request) {
-        QueryParser parser = new QueryParser(Version.LUCENE_47, "title", analyzer);
+        QueryParser parser = new QueryParser("title", analyzer);
         try {
 
             String queryStr = StringUtils.isBlank(request.getQueryStr())
@@ -103,7 +102,9 @@ public class DataRepository implements IDataRepository {
             Page page = new Page();
             page.setPageSize(request.getPageSize());
             page.setPageNo(request.getPageNo());
-            return DataConvert.toDataList(luceneSearchManager.pageQuery(QueryBuild.buildMutilQuery(statusList, "status"), page));
+            QueryParser parser = new QueryParser("status", analyzer);
+            Query parse = parser.parse(QueryBuild.buildMutilQuery(statusList));
+            return DataConvert.toDataList(luceneSearchManager.pageQuery(parse, page));
         } catch (IOException e) {
             log.error("DataRepository status查询错误 msg{}", e.getMessage(), e);
         } catch (ParseException e) {
@@ -116,11 +117,13 @@ public class DataRepository implements IDataRepository {
 
     @Override
     public List<Data> queryDataByTime(DataRangeQryByTimeRequest request) {
-        NumericRangeQuery<Long> query = NumericRangeQuery.newLongRange("time", request.getStartTime(), request.getEndTime(), true, true);
         Page page = new Page();
         page.setPageSize(request.getPageSize());
         page.setPageNo(request.getPageNo());
         try {
+            QueryParser parser = new QueryParser("time", analyzer);
+            String queryStr = "[" + request.getStartTime() + " TO " + request.getEndTime() + "]";
+            Query query = parser.parse(queryStr);
             List<Document> documents = luceneSearchManager.pageQuery(query, page);
             return DataConvert.toDataList(documents);
         } catch (IOException e) {
@@ -134,7 +137,7 @@ public class DataRepository implements IDataRepository {
     @Override
     public long queryDataCount(DataCountQryRequest dataCountQryRequest) {
         Assert.notNull(dataCountQryRequest.getField(), "field不能为空");
-        QueryParser parser = new QueryParser(Version.LUCENE_47, dataCountQryRequest.getField(), analyzer);
+        QueryParser parser = new QueryParser(dataCountQryRequest.getField(), analyzer);
         // 解析查询语句
         Query query = null;
         try {
