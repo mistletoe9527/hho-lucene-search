@@ -25,10 +25,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @lombok.Data
@@ -196,6 +193,7 @@ public class LuceneSearchManager {
         synchronized (lock) {
             return call.call();
         }
+        
     }
 
 
